@@ -194,7 +194,7 @@
 
 .glass-panel {
   margin-bottom: 14rpx;
-  padding: 14rpx;
+  padding: 16rpx;
   border: 1rpx solid rgba(130, 169, 214, 0.22);
   border-radius: 20rpx;
   background: rgba(9, 24, 40, 0.84);
@@ -202,38 +202,68 @@
   backdrop-filter: blur(22rpx);
 }
 
-.panel-line {
-  display: flex;
-  align-items: center;
+.filter-page-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.filter-page-tab {
+  height: 64rpx;
+  border: 1rpx solid rgba(130, 169, 214, 0.22);
+  border-radius: 18rpx;
+  color: #aab8ca;
+  font-size: 25rpx;
+  font-weight: 900;
+  background: rgba(5, 17, 29, 0.76);
+}
+
+.filter-page-tab.active {
+  color: #ffb300;
+  border-color: rgba(255, 179, 0, 0.72);
+  background: linear-gradient(135deg, rgba(255, 179, 0, 0.22), rgba(255, 179, 0, 0.08));
+  box-shadow: 0 0 22rpx rgba(255, 179, 0, 0.16);
+}
+
+.panel-line {
+  display: block;
+  align-items: center;
+  gap: 0;
 }
 
 .panel-line + .panel-line {
   margin-top: 12rpx;
 }
 
+.filter-page-body {
+  min-height: 174rpx;
+}
+
 .panel-label {
-  flex: 0 0 68rpx;
+  display: block;
+  margin-bottom: 14rpx;
   color: #d8e4f2;
-  font-size: 22rpx;
+  font-size: 26rpx;
+  font-weight: 900;
 }
 
 .chip-row {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
 }
 
 .filter-chip,
 .sort-chip {
-  min-width: 92rpx;
-  height: 48rpx;
-  padding: 0 16rpx;
+  min-width: 0;
+  height: 66rpx;
+  padding: 0 18rpx;
   border: 1rpx solid rgba(130, 169, 214, 0.18);
-  border-radius: 999rpx;
-  color: #9fb0c5;
-  font-size: 21rpx;
+  border-radius: 18rpx;
+  color: #c4d1e2;
+  font-size: 26rpx;
+  font-weight: 900;
   background: rgba(5, 17, 29, 0.74);
 }
 
@@ -245,6 +275,27 @@
   box-shadow: 0 0 18rpx rgba(255, 179, 0, 0.12);
 }
 
+.filter-page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.filter-page-dots text {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 999rpx;
+  background: rgba(151, 169, 191, 0.42);
+}
+
+.filter-page-dots text.active {
+  width: 34rpx;
+  background: #ffb300;
+  box-shadow: 0 0 16rpx rgba(255, 179, 0, 0.36);
+}
+
 .sort-panel {
   display: flex;
   flex-wrap: wrap;
@@ -253,6 +304,10 @@
 
 .sort-chip {
   flex: 1 1 30%;
+  height: 48rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  font-size: 21rpx;
 }
 
 .device-scroll {

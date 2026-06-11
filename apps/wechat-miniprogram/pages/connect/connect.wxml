@@ -1,11 +1,12 @@
 <view class="app-page connect-page">
   <view class="connect-head">
     <button class="connect-back" bindtap="goBack">
-      <image src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image>
+      <text class="connect-back-icon">‹</text>
+      <text class="connect-back-text">返回</text>
     </button>
-    <view>
+    <view class="connect-title-wrap">
       <text class="connect-page-title">连接新设备</text>
-      <text class="connect-page-sub">蓝牙 / 5G 双链路硬件绑定</text>
+      <text class="connect-page-sub">蓝牙 / 5G/4G GPS 双链路硬件绑定</text>
     </view>
   </view>
 
@@ -23,7 +24,7 @@
       <text class="hero-sub">{{statusSub}}</text>
       <view class="hero-tags">
         <text>BLE 近场</text>
-        <text>5G/NB 入网</text>
+        <text>5G/4G GPS 入网</text>
         <text>硬件预留</text>
       </view>
     </view>
@@ -70,13 +71,13 @@
 
     <view wx:if="{{!scanning && nearbyDevices.length == 0}}" class="empty-connect panel">
       <text>暂无扫描结果</text>
-      <label>点击下方按钮开始搜索蓝牙或 5G/NB 硬件</label>
+      <label>点击下方按钮开始搜索蓝牙或 5G/4G GPS 硬件</label>
     </view>
   </view>
 
   <view wx:if="{{bindResult}}" class="bind-result panel">
     <text>最近绑定成功</text>
-    <label>{{bindResult.name}} · {{bindResult.channel == 'network' ? '5G/NB' : 'BLE'}}</label>
+    <label>{{bindResult.name}} · {{bindResult.channel == 'network' ? '5G/4G GPS' : 'BLE'}}</label>
   </view>
 
   <view class="connect-actions">

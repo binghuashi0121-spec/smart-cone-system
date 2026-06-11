@@ -182,6 +182,7 @@ Page({
     groupFilter: 'all',
     sortMode: 'default',
     showFilterPanel: false,
+    filterPanelPage: 'status',
     showSortPanel: false,
     expandedDeviceId: '',
     steps: [
@@ -243,6 +244,12 @@ Page({
     this.setData({
       showFilterPanel: !this.data.showFilterPanel,
       showSortPanel: false
+    })
+  },
+
+  selectFilterPanelPage(e) {
+    this.setData({
+      filterPanelPage: e.currentTarget.dataset.page
     })
   },
 

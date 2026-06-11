@@ -10,9 +10,9 @@ const channels = [
   },
   {
     key: 'network',
-    label: '5G/NB 网络',
-    sub: '公网入网与远程绑定',
-    badge: '5G',
+    label: '5G/4G GPS 网络',
+    sub: '公网定位与远程绑定',
+    badge: '5G/4G',
     tone: 'green'
   }
 ]
@@ -45,7 +45,7 @@ Page({
     bindStep: 0,
     bindResult: null,
     statusText: '等待扫描',
-    statusSub: '选择蓝牙或 5G 通道后开始发现设备'
+    statusSub: '选择蓝牙或 5G/4G GPS 通道后开始发现设备'
   },
 
   goBack() {
@@ -85,7 +85,7 @@ Page({
       bindResult: null,
       bindStep: 1,
       statusText: '正在扫描',
-      statusSub: channel === 'network' ? '正在发现 5G/NB 在线硬件' : '正在发现附近 BLE 硬件'
+      statusSub: channel === 'network' ? '正在发现 5G/4G GPS 在线硬件' : '正在发现附近 BLE 硬件'
     })
 
     scanTask.then(list => {

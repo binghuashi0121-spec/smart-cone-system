@@ -1091,19 +1091,21 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 18rpx;
+  gap: 14rpx;
   width: 100%;
-  min-height: 150rpx;
-  margin: 18rpx 0 18rpx;
-  padding: 20rpx 22rpx;
+  min-width: 100%;
+  box-sizing: border-box;
+  min-height: 116rpx;
+  margin: 18rpx 0 22rpx;
+  padding: 18rpx 176rpx 18rpx 18rpx;
   overflow: hidden;
   text-align: left;
-  border-color: rgba(105, 169, 255, 0.28);
+  border-color: rgba(105, 169, 255, 0.34);
+  border-radius: 20rpx;
   background:
-    radial-gradient(circle at 14% 50%, rgba(34, 197, 94, 0.18), transparent 30%),
-    radial-gradient(circle at 86% 12%, rgba(105, 169, 255, 0.22), transparent 34%),
-    linear-gradient(145deg, rgba(16, 34, 52, 0.96), rgba(5, 15, 26, 0.96));
-  box-shadow: 0 16rpx 38rpx rgba(0, 0, 0, 0.34), 0 0 28rpx rgba(105, 169, 255, 0.12), inset 0 1rpx 0 rgba(255, 255, 255, 0.08);
+    linear-gradient(90deg, rgba(34, 197, 94, 0.16), rgba(105, 169, 255, 0.18), rgba(255, 122, 0, 0.08)),
+    linear-gradient(145deg, rgba(15, 34, 52, 0.98), rgba(5, 15, 26, 0.98));
+  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.32), 0 0 28rpx rgba(105, 169, 255, 0.14), inset 0 1rpx 0 rgba(255, 255, 255, 0.08);
 }
 
 .connect-device-card::before {
@@ -1145,12 +1147,12 @@
 
 .connect-radar {
   position: relative;
-  flex: 0 0 92rpx;
+  flex: 0 0 70rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 92rpx;
-  height: 92rpx;
+  width: 70rpx;
+  height: 70rpx;
 }
 
 .connect-ring {
@@ -1177,68 +1179,93 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 70rpx;
-  height: 70rpx;
+  width: 58rpx;
+  height: 58rpx;
   border: 1rpx solid rgba(255, 255, 255, 0.14);
-  border-radius: 22rpx;
+  border-radius: 18rpx;
   background: linear-gradient(145deg, rgba(105, 169, 255, 0.28), rgba(34, 197, 94, 0.16));
   box-shadow: 0 0 24rpx rgba(105, 169, 255, 0.24), inset 0 0 18rpx rgba(255, 255, 255, 0.08);
 }
 
 .connect-icon {
-  width: 38rpx;
-  height: 38rpx;
+  width: 34rpx;
+  height: 34rpx;
   filter: drop-shadow(0 0 12rpx rgba(105, 169, 255, 0.7));
 }
 
 .connect-copy {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  width: 0;
 }
 
 .connect-title {
   display: block;
   color: #ffffff;
-  font-size: 33rpx;
+  font-size: 36rpx;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .connect-sub {
   display: block;
-  margin-top: 8rpx;
+  margin-top: 10rpx;
   color: #9fd3ff;
-  font-size: 23rpx;
+  font-size: 21rpx;
   font-weight: 800;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .connect-desc {
-  display: block;
-  margin-top: 6rpx;
+  display: none;
+  margin-top: 0;
   color: #9aa6b7;
   font-size: 21rpx;
   white-space: nowrap;
 }
 
 .connect-channels {
-  flex: 0 0 76rpx;
+  position: absolute;
+  right: 48rpx;
+  top: 50%;
+  z-index: 2;
+  width: 118rpx;
+  transform: translateY(-50%);
   display: flex;
-  flex-direction: column;
-  gap: 10rpx;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 6rpx;
 }
 
 .connect-channels text {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 34rpx;
+  min-width: 42rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
   border: 1rpx solid rgba(255, 255, 255, 0.12);
   border-radius: 999rpx;
   color: #bfffd9;
-  font-size: 19rpx;
+  font-size: 18rpx;
   font-weight: 900;
   background: rgba(34, 197, 94, 0.1);
+}
+
+.connect-arrow {
+  position: absolute;
+  right: 18rpx;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  color: #c8dcff;
+  font-size: 44rpx;
+  line-height: 1;
 }
 
 @keyframes connectSweep {

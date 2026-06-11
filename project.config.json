@@ -1,6 +1,8 @@
 {
+  "appid": "wx7c0e7e58075b6f46",
   "compileType": "miniprogram",
-  "libVersion": "trial",
+  "miniprogramRoot": "apps/wechat-miniprogram/",
+  "libVersion": "3.16.1",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -21,8 +23,7 @@
   },
   "condition": {},
   "editorSetting": {
-    "tabIndent": "auto",
+    "tabIndent": "insertSpaces",
     "tabSize": 2
-  },
-  "appid": "wx7c0e7e58075b6f46"
+  }
 }

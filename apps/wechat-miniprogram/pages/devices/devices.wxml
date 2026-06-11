@@ -34,17 +34,25 @@
     </view>
 
     <view wx:if="{{showFilterPanel}}" class="filter-panel glass-panel">
-      <view class="panel-line">
+      <view class="filter-page-tabs">
+        <button class="filter-page-tab {{filterPanelPage == 'status' ? 'active' : ''}}" bindtap="selectFilterPanelPage" data-page="status">状态筛选</button>
+        <button class="filter-page-tab {{filterPanelPage == 'group' ? 'active' : ''}}" bindtap="selectFilterPanelPage" data-page="group">区域筛选</button>
+      </view>
+      <view wx:if="{{filterPanelPage == 'status'}}" class="panel-line filter-page-body">
         <text class="panel-label">状态</text>
         <view class="chip-row">
           <button wx:for="{{statusFilters}}" wx:key="key" class="filter-chip {{statusFilter == item.key ? 'active' : ''}}" bindtap="selectStatusFilter" data-key="{{item.key}}">{{item.label}}</button>
         </view>
       </view>
-      <view class="panel-line">
+      <view wx:if="{{filterPanelPage == 'group'}}" class="panel-line filter-page-body">
         <text class="panel-label">区域</text>
         <view class="chip-row">
           <button wx:for="{{groupFilters}}" wx:key="key" class="filter-chip {{groupFilter == item.key ? 'active' : ''}}" bindtap="selectGroupFilter" data-key="{{item.key}}">{{item.label}}</button>
         </view>
+      </view>
+      <view class="filter-page-dots">
+        <text class="{{filterPanelPage == 'status' ? 'active' : ''}}"></text>
+        <text class="{{filterPanelPage == 'group' ? 'active' : ''}}"></text>
       </view>
     </view>
 

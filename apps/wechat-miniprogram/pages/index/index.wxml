@@ -118,21 +118,20 @@
 
   <button class="connect-device-card panel" bindtap="goConnectDevice" hover-class="connect-device-press">
     <view class="connect-radar">
-      <view class="connect-ring one"></view>
-      <view class="connect-ring two"></view>
       <view class="connect-core">
         <image class="connect-icon" src="/assets/icons/pages/index/single-device.svg" mode="aspectFit"></image>
       </view>
     </view>
     <view class="connect-copy">
       <text class="connect-title">连接新设备</text>
-      <text class="connect-sub">蓝牙 / 5G 双链路绑定</text>
+      <text class="connect-sub">蓝牙 / 5G/4G GPS 双链路绑定</text>
       <text class="connect-desc">扫描附近硬件并完成入网配置</text>
     </view>
     <view class="connect-channels">
       <text>BLE</text>
-      <text>5G</text>
+      <text>5G/4G</text>
     </view>
+    <text class="connect-arrow">›</text>
   </button>
 
   <view wx:if="{{showMapDetail}}" class="sheet-mask" bindtap="closeMapDetail"></view>
