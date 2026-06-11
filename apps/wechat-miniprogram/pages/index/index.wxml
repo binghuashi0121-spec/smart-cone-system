@@ -1,0 +1,277 @@
+<view class="app-page home-page">
+  <view class="header">
+    <view class="title-row">
+      <image class="cone-logo" src="/assets/icons/pages/index/traffic-cone.svg" mode="aspectFit"></image>
+      <text class="page-title">{{task.title}}</text>
+    </view>
+  </view>
+
+  <view class="task-strip">
+    <button class="mode-pill" bindtap="quickAction" data-text="{{task.mode}}">
+      <image class="ui-icon-sm" src="/assets/icons/pages/index/night-mode.svg" mode="aspectFit"></image>
+      <text>{{task.mode}}</text>
+    </button>
+    <button class="task-stat" bindtap="quickAction" data-text="在线状态">
+      <image class="dot-icon" src="/assets/icons/pages/index/online-dot.svg" mode="aspectFit"></image>
+      <text class="muted">在线</text>
+      <text class="strong">{{task.online}}/{{task.total}}</text>
+    </button>
+    <view class="task-sep"></view>
+    <button class="task-stat alert-stat" bindtap="openAlert" data-id="C07">
+      <image class="ui-icon-sm" src="/assets/icons/pages/index/alert-bell.svg" mode="aspectFit"></image>
+      <text>告警</text>
+      <text class="strong">{{task.alerts}}</text>
+    </button>
+    <view class="task-time">
+      <image class="ui-icon-sm" src="/assets/icons/pages/index/calendar-time.svg" mode="aspectFit"></image>
+      <text>{{task.time}}</text>
+    </view>
+  </view>
+
+  <view class="map-card panel">
+    <view class="route-label">
+      <image class="ui-icon-sm" src="/assets/icons/pages/index/target-location.svg" mode="aspectFit"></image>
+      <text>{{task.road}} {{task.section}}</text>
+    </view>
+    <button class="locate-btn" bindtap="refreshLocation">
+      <image class="locate-icon" src="/assets/icons/pages/index/refresh-location.svg" mode="aspectFit"></image>
+    </button>
+    <view class="fake-map small scene-{{activeWarningMode}}">
+      <view class="water one"></view>
+      <view class="water two"></view>
+      <view class="road">
+        <view class="lane lane-one"></view>
+        <view class="lane lane-two"></view>
+        <text class="direction left">← {{task.directionLeft}}</text>
+        <text class="direction right">{{task.directionRight}} →</text>
+      </view>
+      <view class="work-zone">
+        <image class="ui-icon-sm" src="/assets/icons/pages/index/work-zone.svg" mode="aspectFit"></image>
+        <text>施工区域</text>
+      </view>
+      <button wx:for="{{previewCones}}" wx:key="id" hover-class="none" class="cone map-{{item.mapTone}} {{highlightDeviceId == item.id ? 'focus' : ''}}" style="left: {{item.x}}%; top: {{item.y}}%;" bindtap="openDeviceDetail" data-id="{{item.id}}">
+        <image class="cone-body" src="{{item.iconPath}}" mode="aspectFit"></image>
+      </button>
+    </view>
+    <button class="expand-map" bindtap="openMapDetail">
+      <image class="ui-icon-sm" src="/assets/icons/pages/index/expand-map.svg" mode="aspectFit"></image>
+      <text>展开地图</text>
+    </button>
+  </view>
+
+  <view class="emergency-panel panel">
+    <button class="emergency-main" bindtap="startEmergency">
+      <image class="siren" src="/assets/icons/pages/index/emergency-mode.svg" mode="aspectFit"></image>
+      <view>
+        <text class="emergency-title">应急模式</text>
+        <text class="emergency-sub">立即启动全线警示与防护</text>
+      </view>
+      <image class="emergency-arrow" src="/assets/icons/pages/index/emergency-arrow.svg" mode="aspectFit"></image>
+    </button>
+    <view class="quick-row">
+      <button class="quick-btn" bindtap="quickAction" data-text="一键警示">
+        <image class="quick-icon" src="/assets/icons/pages/index/warning-alert.svg" mode="aspectFit"></image>
+        <text>一键警示</text>
+        <text class="muted">全线闪烁警示</text>
+      </button>
+      <view class="divider"></view>
+      <button class="quick-btn" bindtap="quickAction" data-text="静音模式">
+        <image class="quick-icon" src="/assets/icons/pages/index/silent-mode.svg" mode="aspectFit"></image>
+        <text>静音模式</text>
+        <text class="muted">关闭设备提示音</text>
+      </button>
+      <view class="divider"></view>
+      <button class="quick-btn" bindtap="quickAction" data-text="结束任务">
+        <image class="quick-icon" src="/assets/icons/pages/index/end-task.svg" mode="aspectFit"></image>
+        <text>结束任务</text>
+        <text class="muted">停止本次封道</text>
+      </button>
+    </view>
+  </view>
+
+  <view class="stats-grid">
+    <button class="stat-card panel green-card" bindtap="quickAction" data-text="在线设备">
+      <image class="stat-icon-img" src="/assets/icons/pages/index/online-devices.svg" mode="aspectFit"></image>
+      <text>在线设备</text>
+      <view><text class="stat-num green">{{stats.online}}</text><text class="stat-tail">/{{stats.total}}</text></view>
+      <view class="bar"><view style="width: 90%;"></view></view>
+    </button>
+    <button class="stat-card panel yellow-card" bindtap="openAlert" data-id="C16" data-alert-tone="warning">
+      <image class="stat-icon-img" src="/assets/icons/pages/index/battery-low.svg" mode="aspectFit"></image>
+      <text>低电量</text>
+      <view><text class="stat-num yellow">{{stats.lowBattery}}</text><text class="stat-tail">个</text></view>
+      <view class="bar"><view style="width: 38%;"></view></view>
+    </button>
+    <button class="stat-card panel red-card" bindtap="openAlert" data-id="C18">
+      <image class="stat-icon-img" src="/assets/icons/pages/index/tilt-alert.svg" mode="aspectFit"></image>
+      <text>倾倒异常</text>
+      <view><text class="stat-num red">{{stats.tilted}}</text><text class="stat-tail">个</text></view>
+      <view class="bar"><view style="width: 64%;"></view></view>
+    </button>
+    <button class="stat-card panel orange-card" bindtap="openAlert" data-id="C07" data-alert-tone="shifted">
+      <image class="stat-icon-img" src="/assets/icons/pages/index/position-shift.svg" mode="aspectFit"></image>
+      <text>位置偏移</text>
+      <view><text class="stat-num orange">{{stats.shifted}}</text><text class="stat-tail">个</text></view>
+      <view class="bar"><view style="width: 72%;"></view></view>
+    </button>
+  </view>
+
+  <button class="connect-device-card panel" bindtap="goConnectDevice" hover-class="connect-device-press">
+    <view class="connect-radar">
+      <view class="connect-ring one"></view>
+      <view class="connect-ring two"></view>
+      <view class="connect-core">
+        <image class="connect-icon" src="/assets/icons/pages/index/single-device.svg" mode="aspectFit"></image>
+      </view>
+    </view>
+    <view class="connect-copy">
+      <text class="connect-title">连接新设备</text>
+      <text class="connect-sub">蓝牙 / 5G 双链路绑定</text>
+      <text class="connect-desc">扫描附近硬件并完成入网配置</text>
+    </view>
+    <view class="connect-channels">
+      <text>BLE</text>
+      <text>5G</text>
+    </view>
+  </button>
+
+  <view wx:if="{{showMapDetail}}" class="sheet-mask" bindtap="closeMapDetail"></view>
+  <view wx:if="{{showMapDetail}}" class="bottom-sheet map-sheet">
+    <view class="sheet-handle"></view>
+    <view class="sheet-head">
+      <view>
+        <view class="section-title">
+          <image class="ui-icon" src="/assets/icons/pages/index/map-detail.svg" mode="aspectFit"></image>
+          <text>施工区地图详情</text>
+        </view>
+        <view class="sheet-road muted">
+          <image class="ui-icon-sm" src="/assets/icons/pages/index/target-location.svg" mode="aspectFit"></image>
+          <text>{{task.road}} {{task.section}}</text>
+        </view>
+      </view>
+      <view class="map-online">
+        <image class="dot-icon" src="/assets/icons/pages/index/online-dot.svg" mode="aspectFit"></image>
+        <text>在线</text><text class="strong">18/20</text>
+      </view>
+      <button class="close-btn" bindtap="closeMapDetail"><image class="ui-icon" src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image></button>
+    </view>
+    <view class="layer-tabs">
+      <button class="tag {{selectedLayer == 'all' ? 'active' : ''}}" bindtap="selectLayer" data-layer="all">
+        <image class="ui-icon-sm" src="/assets/icons/pages/index/all-devices.svg" mode="aspectFit"></image><text>全部设备</text>
+      </button>
+      <button class="tag alert-tab {{selectedLayer == 'alert' ? 'active' : ''}}" bindtap="selectLayer" data-layer="alert">
+        <image class="ui-icon-sm" src="/assets/icons/pages/index/abnormal-devices.svg" mode="aspectFit"></image><text>异常设备</text>
+      </button>
+      <button class="tag {{selectedLayer == 'group' ? 'active' : ''}}" bindtap="selectLayer" data-layer="group">
+        <image class="ui-icon-sm" src="/assets/icons/pages/index/group-display.svg" mode="aspectFit"></image><text>分组显示</text>
+      </button>
+      <button class="tag {{selectedLayer == 'work' ? 'active' : ''}}" bindtap="selectLayer" data-layer="work">
+        <image class="ui-icon-sm" src="/assets/icons/pages/index/work-area-filter.svg" mode="aspectFit"></image><text>施工区域</text>
+      </button>
+    </view>
+    <view class="fake-map detail scene-{{activeWarningMode}}">
+      <view class="buffer-zone"><text>缓冲区</text><text class="buffer-bottom">缓冲区</text></view>
+      <view class="emergency-lane">
+        <text>应急车道</text>
+      </view>
+      <view class="road">
+        <view class="lane lane-one"></view>
+        <view class="lane lane-two"></view>
+        <text class="direction left">← {{task.directionLeft}}</text>
+        <text class="direction right">{{task.directionRight}} →</text>
+      </view>
+      <view class="work-zone detail-zone">
+        <image class="ui-icon-sm" src="/assets/icons/pages/index/work-zone.svg" mode="aspectFit"></image>
+        <text>施工区域</text>
+      </view>
+      <view class="compass"><text>N</text><image class="ui-icon-sm" src="/assets/icons/pages/index/compass.svg" mode="aspectFit"></image></view>
+      <button class="locate-btn detail-locate" bindtap="refreshLocation">
+        <image class="ui-icon" src="/assets/icons/pages/index/refresh-location.svg" mode="aspectFit"></image>
+      </button>
+      <button wx:for="{{detailCones}}" wx:key="id" hover-class="none" class="cone labeled map-{{item.mapTone}} {{highlightDeviceId == item.id ? 'focus' : ''}}" style="left: {{item.x}}%; top: {{item.y}}%;" bindtap="openDeviceDetail" data-id="{{item.id}}">
+        <image class="cone-body" src="{{item.iconPath}}" mode="aspectFit"></image>
+        <text class="cone-id">{{item.id}}</text>
+      </button>
+    </view>
+    <view class="legend">
+      <text><text class="legend-cone normal"></text>正常在线</text>
+      <text><text class="legend-cone low"></text>低电量</text>
+      <text><text class="legend-cone shifted"></text>位置偏移</text>
+      <text><text class="legend-cone tilted"></text>倾倒异常</text>
+      <text><text class="legend-emergency"></text>应急车道</text>
+      <text><text class="legend-dash"></text>缓冲区范围</text>
+      <text><text class="legend-fill"></text>施工区域</text>
+    </view>
+    <view class="map-info soft-panel">
+      <view><image class="info-icon-img" src="/assets/icons/pages/index/work-zone.svg" mode="aspectFit"></image><text class="muted">阵列模式:</text><text>渐变导流布设</text></view>
+      <view><image class="info-icon-img" src="/assets/icons/pages/index/group-display.svg" mode="aspectFit"></image><text class="muted">阵列完整度</text><text class="green big">90%</text></view>
+      <view><image class="info-icon-img" src="/assets/icons/pages/index/abnormal-devices.svg" mode="aspectFit"></image><text class="muted">异常设备:</text><text class="red">C18</text></view>
+      <view class="updated muted"><image class="ui-icon-sm" src="/assets/icons/pages/index/calendar-time.svg" mode="aspectFit"></image><text>最近更新时间：10秒前</text></view>
+    </view>
+    <view class="map-actions">
+      <button class="ghost-btn" bindtap="openAlert" data-id="C07"><image class="ui-icon" src="/assets/icons/pages/index/warning-alert.svg" mode="aspectFit"></image><text>查看异常</text></button>
+      <button class="ghost-btn blue" bindtap="refreshLocation"><image class="ui-icon" src="/assets/icons/pages/index/refresh-location.svg" mode="aspectFit"></image><text>刷新定位</text></button>
+      <button class="danger-btn" bindtap="startEmergency"><image class="ui-icon" src="/assets/icons/pages/index/emergency-mode.svg" mode="aspectFit"></image><text>启动应急</text></button>
+    </view>
+  </view>
+
+  <view wx:if="{{showAlert}}" class="sheet-mask" bindtap="closeAlert"></view>
+  <view wx:if="{{showAlert}}" class="bottom-sheet alert-sheet alert-{{activeAlert.alertTone}}">
+    <view class="sheet-head">
+      <view class="section-title alert-title">
+        <image class="ui-icon" src="/assets/icons/pages/index/emergency-mode.svg" mode="aspectFit"></image>
+        <text>{{activeAlert.sheetTitle}}</text>
+      </view>
+      <button class="close-btn" bindtap="closeAlert"><image class="ui-icon" src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image></button>
+    </view>
+    <view class="alert-level">{{activeAlert.levelLabel}}：<text>{{activeAlert.level}}</text></view>
+    <view class="alert-grid">
+      <view><text class="muted">告警类型</text><text>{{activeAlert.type}}</text></view>
+      <view><text class="muted">设备编号</text><text>{{activeAlert.id}}</text></view>
+      <view><text class="muted">位置描述</text><text>{{activeAlert.location}}</text></view>
+      <view><text class="muted">发生时间</text><text>{{activeAlert.time}}</text></view>
+    </view>
+    <view class="advice">建议处理：{{activeAlert.advice}}</view>
+    <view class="alert-actions">
+      <button class="ghost-btn" bindtap="showAlertOnMap">查看地图位置</button>
+      <button class="ghost-btn" bindtap="handleAlertAction" data-text="告警已静音">静音告警</button>
+      <button class="primary-btn" bindtap="handleAlertAction" data-text="{{activeAlert.primaryAction}}">{{activeAlert.primaryAction}}</button>
+      <button class="danger-btn" bindtap="handleAlertAction" data-text="{{activeAlert.dangerAction}}">{{activeAlert.dangerAction}}</button>
+    </view>
+  </view>
+
+  <view wx:if="{{showDeviceDetail}}" class="sheet-mask" bindtap="closeDeviceDetail"></view>
+  <view wx:if="{{showDeviceDetail}}" class="bottom-sheet device-sheet device-{{activeDevice.statusTone}}">
+    <view class="sheet-head">
+      <view class="section-title device-title">
+        <image class="ui-icon" src="/assets/icons/pages/index/single-device.svg" mode="aspectFit"></image>
+        <text>设备 {{activeDevice.id}}</text>
+        <text class="device-status-chip">{{activeDevice.statusLabel}}</text>
+      </view>
+      <button class="close-btn device-close" bindtap="closeDeviceDetail"><image class="ui-icon" src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image></button>
+    </view>
+    <view class="device-detail-grid">
+      <text class="device-field device-status-field">当前状态：{{activeDevice.online ? '在线' : '离线'}} · {{activeDevice.statusLabel}}</text>
+      <text class="device-field device-battery-field">电量：{{activeDevice.battery}}%</text>
+      <text class="device-field device-posture-field">姿态：{{activeDevice.posture}}</text>
+      <text class="device-field">定位状态：{{activeDevice.online ? '定位正常' : '未定位'}}</text>
+      <text class="device-field">当前模式：{{task.mode}}</text>
+      <text class="device-field">信号强度：{{activeDevice.signal}}格</text>
+      <text class="device-field">所属分组：{{activeDevice.group}}</text>
+      <text class="device-field">最近更新时间：10秒前</text>
+    </view>
+    <view class="device-actions">
+      <button class="primary-btn" bindtap="goControl">单独控制</button>
+      <button class="ghost-btn" bindtap="refreshLocation">刷新定位</button>
+      <button class="ghost-btn" bindtap="quickAction" data-text="加入分组">加入分组</button>
+      <button class="ghost-btn" bindtap="quickAction" data-text="设备待机">设备待机</button>
+    </view>
+  </view>
+
+  <view class="custom-nav">
+    <button wx:for="{{navItems}}" wx:key="page" class="nav-item {{currentPage == item.page ? 'active' : ''}}" bindtap="switchTab" data-url="{{item.url}}">
+      <image class="nav-icon-img" src="{{item.iconPath}}" mode="aspectFit"></image>
+      <text class="nav-label">{{item.text}}</text>
+    </button>
+  </view>
+</view>

@@ -1,0 +1,14 @@
+# WeChat mini program
+apps/wechat-miniprogram/project.private.config.json
+apps/wechat-miniprogram/miniprogram_npm/
+apps/wechat-miniprogram/node_modules/
+
+# ESP-IDF
+firmware/esp32-gps/build/
+firmware/esp32-gps/managed_components/
+firmware/esp32-gps/dependencies.lock
+
+# General
+.DS_Store
+*.log
+.vscode/

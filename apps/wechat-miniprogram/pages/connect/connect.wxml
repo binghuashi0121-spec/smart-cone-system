@@ -1,0 +1,92 @@
+<view class="app-page connect-page">
+  <view class="connect-head">
+    <button class="connect-back" bindtap="goBack">
+      <image src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image>
+    </button>
+    <view>
+      <text class="connect-page-title">连接新设备</text>
+      <text class="connect-page-sub">蓝牙 / 5G 双链路硬件绑定</text>
+    </view>
+  </view>
+
+  <view class="connect-hero panel">
+    <view class="hero-radar {{scanning || binding ? 'active' : ''}}">
+      <view class="hero-ring one"></view>
+      <view class="hero-ring two"></view>
+      <view class="hero-ring three"></view>
+      <view class="hero-core">
+        <image src="/assets/icons/pages/index/single-device.svg" mode="aspectFit"></image>
+      </view>
+    </view>
+    <view class="hero-copy">
+      <text class="hero-status">{{statusText}}</text>
+      <text class="hero-sub">{{statusSub}}</text>
+      <view class="hero-tags">
+        <text>BLE 近场</text>
+        <text>5G/NB 入网</text>
+        <text>硬件预留</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="channel-grid">
+    <button wx:for="{{channels}}" wx:key="key" class="channel-card {{selectedChannel == item.key ? 'active' : ''}} {{item.tone}}" bindtap="selectChannel" data-key="{{item.key}}">
+      <text class="channel-badge">{{item.badge}}</text>
+      <text class="channel-title">{{item.label}}</text>
+      <text class="channel-sub">{{item.sub}}</text>
+    </button>
+  </view>
+
+  <view class="step-panel panel">
+    <view wx:for="{{steps}}" wx:key="key" class="bind-step {{bindStep >= index + 1 ? 'active' : ''}}">
+      <text>{{index + 1}}</text>
+      <label>{{item.label}}</label>
+    </view>
+  </view>
+
+  <view class="device-section">
+    <view class="section-line">
+      <text>发现的设备</text>
+      <label>{{nearbyDevices.length}} 台</label>
+    </view>
+
+    <view wx:if="{{scanning}}" class="scan-card panel">
+      <view class="scan-line"></view>
+      <text>正在扫描附近硬件...</text>
+      <label>请保持设备上电并开启配网模式</label>
+    </view>
+
+    <button wx:for="{{nearbyDevices}}" wx:key="id" class="connect-device-item panel {{selectedDevice && selectedDevice.id == item.id ? 'selected' : ''}}" bindtap="selectDevice" data-id="{{item.id}}">
+      <view class="device-radio"></view>
+      <view class="device-main">
+        <text class="device-name">{{item.name}}</text>
+        <text class="device-code">{{item.deviceCode}}</text>
+      </view>
+      <view class="device-meta">
+        <text>{{item.status}}</text>
+        <label>{{item.signalText}}</label>
+      </view>
+    </button>
+
+    <view wx:if="{{!scanning && nearbyDevices.length == 0}}" class="empty-connect panel">
+      <text>暂无扫描结果</text>
+      <label>点击下方按钮开始搜索蓝牙或 5G/NB 硬件</label>
+    </view>
+  </view>
+
+  <view wx:if="{{bindResult}}" class="bind-result panel">
+    <text>最近绑定成功</text>
+    <label>{{bindResult.name}} · {{bindResult.channel == 'network' ? '5G/NB' : 'BLE'}}</label>
+  </view>
+
+  <view class="connect-actions">
+    <button class="ghost-btn scan-btn" bindtap="startScan" loading="{{scanning}}" disabled="{{binding}}">
+      <image class="ui-icon" src="/assets/icons/pages/index/refresh-location.svg" mode="aspectFit"></image>
+      <text>{{scanning ? '扫描中' : '开始扫描'}}</text>
+    </button>
+    <button class="primary-btn bind-btn" bindtap="bindDevice" loading="{{binding}}" disabled="{{scanning}}">
+      <image class="ui-icon" src="/assets/icons/pages/index/online-devices.svg" mode="aspectFit"></image>
+      <text>{{binding ? '绑定中' : '绑定设备'}}</text>
+    </button>
+  </view>
+</view>

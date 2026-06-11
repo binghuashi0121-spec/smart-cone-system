@@ -1,0 +1,260 @@
+<view class="app-page control-page">
+  <view class="header">
+    <view class="title-row">
+      <image class="cone-logo" src="/assets/icons/pages/control/traffic-cone.svg" mode="aspectFit"></image>
+      <view>
+        <text class="page-title">控制中心</text>
+        <text class="page-subtitle">{{task.title}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="scope-tabs">
+    <button wx:for="{{scopes}}" wx:key="key" class="scope-card {{selectedScope == item.key ? 'active' : ''}}" bindtap="selectScope" data-key="{{item.key}}">
+      <image class="scope-icon-img" src="{{item.iconPath}}" mode="aspectFit"></image>
+      <view>
+        <text>{{item.title}}</text>
+        <text wx:if="{{item.sub}}" class="muted">{{item.sub}}</text>
+      </view>
+    </button>
+  </view>
+
+  <view wx:if="{{selectedScope == 'single'}}" class="single-device-card panel">
+    <view>
+      <text class="single-label">当前设备</text>
+      <text class="single-id">{{selectedDeviceId}}</text>
+    </view>
+    <view class="single-meta">
+      <text>{{selectedDeviceStatus}}</text>
+      <text>电量 {{selectedDeviceBattery}} · 信号 {{selectedDevice.signalLabel}}</text>
+      <text>{{selectedDevice.groupArea}}</text>
+    </view>
+    <button class="single-refresh" bindtap="openDevicePicker">
+      <image class="ui-icon-sm" src="/assets/icons/pages/control/single-device.svg" mode="aspectFit"></image>
+    </button>
+  </view>
+
+  <view wx:if="{{selectedScope == 'all'}}" class="panel control-panel">
+    <view class="section-title mode-section-title">
+      <view class="mode-title-left">
+        <image class="ui-icon" src="/assets/icons/pages/control/emergency-mode.svg" mode="aspectFit"></image>
+        <text>警示模式</text>
+      </view>
+      <view class="current-mode-badge mode-{{selectedModeMeta.toneClass}}">
+        <text>当前模式：{{selectedModeMeta.label}}</text>
+      </view>
+    </view>
+    <view class="mode-grid">
+      <button wx:for="{{modes}}" wx:key="key" class="mode-card {{selectedMode == item.key ? 'active' : ''}} {{item.danger ? 'danger' : ''}}" bindtap="selectMode" data-key="{{item.key}}">
+        <image class="mode-icon-img" src="{{item.iconPath}}" mode="aspectFit"></image>
+        <text class="mode-title">{{item.title}}</text>
+        <text class="mode-sub">{{item.sub}}</text>
+        <image wx:if="{{selectedMode == item.key}}" class="check-img" src="/assets/icons/pages/control/check.svg" mode="aspectFit"></image>
+      </button>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedScope == 'all'}}" class="panel control-panel">
+    <view class="section-title">
+      <image class="ui-icon" src="/assets/icons/pages/control/light-control.svg" mode="aspectFit"></image>
+      <text>灯光控制</text>
+    </view>
+    <view class="settings-box">
+      <view class="switch-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/led-switch.svg" mode="aspectFit"></image><text>LED开关</text></view>
+        <switch color="#ff7a00" checked="{{ledOn}}" bindchange="onLedChange" />
+      </view>
+      <view class="control-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/brightness.svg" mode="aspectFit"></image><text>亮度调节</text></view>
+        <view class="slider-wrap"><slider value="{{brightness}}" min="0" max="100" activeColor="#ff7a00" backgroundColor="rgba(255,255,255,0.14)" block-color="#ff8a1f" bindchange="onBrightness" /><text>{{brightness}}%</text></view>
+      </view>
+      <view class="control-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/flash-rate.svg" mode="aspectFit"></image><text>闪烁频率</text></view>
+        <view class="segmented flash-segmented">
+          <button class="{{flashRate == 'slow' ? 'active' : ''}}" bindtap="selectFlash" data-rate="slow">慢速</button>
+          <button class="{{flashRate == 'medium' ? 'active' : ''}}" bindtap="selectFlash" data-rate="medium">中速</button>
+          <button class="{{flashRate == 'fast' ? 'active' : ''}}" bindtap="selectFlash" data-rate="fast">快速</button>
+        </view>
+      </view>
+      <view class="switch-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/strobe.svg" mode="aspectFit"></image><text>爆闪灯</text></view>
+        <switch color="#ff7a00" checked="{{strobeOn}}" bindchange="onStrobeChange" />
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedScope == 'all'}}" class="panel control-panel">
+    <view class="section-title">
+      <image class="ui-icon" src="/assets/icons/pages/control/sound-control.svg" mode="aspectFit"></image>
+      <text>声音控制</text>
+    </view>
+    <view class="settings-box">
+      <view class="switch-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/sound-switch.svg" mode="aspectFit"></image><text>声音开关</text></view>
+        <switch color="#ff7a00" checked="{{soundOn}}" bindchange="onSoundChange" />
+      </view>
+      <view class="control-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/sound-control.svg" mode="aspectFit"></image><text>音量调节</text></view>
+        <view class="slider-wrap"><slider value="{{volume}}" min="0" max="100" activeColor="#ff7a00" backgroundColor="rgba(255,255,255,0.14)" block-color="#ff8a1f" bindchange="onVolume" /><text>{{volume}}%</text></view>
+      </view>
+      <picker range="{{soundTypes}}" value="{{soundIndex}}" bindchange="onSoundType">
+        <view class="control-row picker-row">
+          <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/sound-type.svg" mode="aspectFit"></image><text>警示音类型</text></view>
+          <text>{{soundTypes[soundIndex]}} ›</text>
+        </view>
+      </picker>
+      <view class="switch-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/night-noise-reduce.svg" mode="aspectFit"></image><text>夜间降噪</text></view>
+        <switch color="#ff7a00" checked="{{noiseReduce}}" bindchange="onNoiseChange" />
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedScope == 'single'}}" class="panel control-panel single-control-panel">
+    <view class="section-title">
+      <image class="ui-icon" src="/assets/icons/pages/control/single-control.svg" mode="aspectFit"></image>
+      <text>单设备精调</text>
+    </view>
+    <view class="settings-box">
+      <view class="switch-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/led-switch.svg" mode="aspectFit"></image><text>本机LED</text></view>
+        <switch color="#ff7a00" checked="{{ledOn}}" bindchange="onLedChange" />
+      </view>
+      <view class="control-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/brightness.svg" mode="aspectFit"></image><text>本机亮度</text></view>
+        <view class="slider-wrap"><slider value="{{brightness}}" min="0" max="100" activeColor="#ff7a00" backgroundColor="rgba(255,255,255,0.14)" block-color="#ff8a1f" bindchange="onBrightness" /><text>{{brightness}}%</text></view>
+      </view>
+      <view class="control-row flash-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/flash-rate.svg" mode="aspectFit"></image><text>本机频率</text></view>
+        <view class="segmented flash-segmented">
+          <button class="{{flashRate == 'slow' ? 'active' : ''}}" bindtap="selectFlash" data-rate="slow">慢速</button>
+          <button class="{{flashRate == 'medium' ? 'active' : ''}}" bindtap="selectFlash" data-rate="medium">中速</button>
+          <button class="{{flashRate == 'fast' ? 'active' : ''}}" bindtap="selectFlash" data-rate="fast">快速</button>
+        </view>
+      </view>
+      <view class="switch-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/sound-switch.svg" mode="aspectFit"></image><text>本机声音</text></view>
+        <switch color="#ff7a00" checked="{{soundOn}}" bindchange="onSoundChange" />
+      </view>
+      <view class="control-row picker-row">
+        <view class="row-label"><image class="ui-icon-sm" src="/assets/icons/pages/control/refresh-location.svg" mode="aspectFit"></image><text>定位校正</text></view>
+        <button class="inline-action" bindtap="viewFeedback">刷新定位</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedScope == 'single'}}" class="panel single-map-panel">
+    <view class="section-title single-map-title">
+      <view class="mode-title-left">
+        <image class="ui-icon" src="/assets/icons/pages/control/refresh-location.svg" mode="aspectFit"></image>
+        <text>设备位置地图</text>
+      </view>
+      <text class="single-map-chip map-device-{{selectedDevice.tone}}">{{selectedDeviceId}} · {{selectedDevice.statusLabel}}</text>
+    </view>
+    <view class="control-fake-map">
+      <view class="control-map-water one"></view>
+      <view class="control-map-water two"></view>
+      <view class="control-map-road">
+        <view class="control-map-lane lane-one"></view>
+        <view class="control-map-lane lane-two"></view>
+        <text class="control-map-direction left">← {{task.directionLeft}}</text>
+        <text class="control-map-direction right">{{task.directionRight}} →</text>
+      </view>
+      <view class="control-map-zone">
+        <text>施工区域</text>
+      </view>
+      <view wx:for="{{controlDevices}}" wx:key="id" class="control-map-device map-device-{{item.tone}} {{selectedDeviceId == item.id ? 'active' : ''}}" style="left: {{item.x}}%; top: {{item.y}}%;">
+        <view wx:if="{{selectedDeviceId == item.id}}" class="control-map-ring"></view>
+        <view wx:if="{{selectedDeviceId == item.id}}" class="control-map-ring second"></view>
+        <text wx:if="{{selectedDeviceId == item.id}}" class="control-map-label">{{item.id}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="feedback-card {{selectedScope == 'single' ? 'single-feedback' : ''}}">
+    <view class="success-mark"><image class="ui-icon" src="/assets/icons/pages/control/check.svg" mode="aspectFit"></image></view>
+    <view>
+      <text class="feedback-title">{{feedback}}</text>
+      <text class="feedback-sub">{{feedbackSub}}</text>
+    </view>
+    <button class="detail-link" bindtap="viewFeedback">查看详情 ›</button>
+  </view>
+
+  <button class="primary-btn send-btn" bindtap="sendCommand">
+    <image class="ui-icon" src="/assets/icons/pages/control/send-command.svg" mode="aspectFit"></image>
+    <text class="send-title">{{selectedScope == 'single' ? '下发单设备指令' : '下发控制指令'}}</text>
+    <text>{{selectedScope == 'single' ? '仅同步到当前选中的设备' : '将当前设置同步到全部路锥'}}</text>
+  </button>
+
+  <view wx:if="{{showDevicePicker}}" class="sheet-mask" bindtap="closeDevicePicker"></view>
+  <view wx:if="{{showDevicePicker}}" class="bottom-sheet control-device-sheet">
+    <view class="device-picker-head">
+      <view class="device-picker-title">
+        <image class="ui-icon-lg" src="/assets/icons/pages/control/single-device.svg" mode="aspectFit"></image>
+        <view>
+          <text class="picker-main-title">选择单设备</text>
+          <text class="picker-subtitle">选择要查看的设备，实时掌握设备状态</text>
+        </view>
+      </view>
+      <view class="picker-filter-entry">
+        <image class="ui-icon-sm" src="/assets/icons/pages/devices/filter.svg" mode="aspectFit"></image>
+        <text>筛选</text>
+      </view>
+      <button class="close-btn picker-close" bindtap="closeDevicePicker">
+        <image class="ui-icon" src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image>
+      </button>
+    </view>
+
+    <view class="device-filter-tabs">
+      <button wx:for="{{deviceFilters}}" wx:key="key" class="device-filter-chip {{deviceFilter == item.key ? 'active' : ''}} filter-{{item.key}}" bindtap="selectDeviceFilter" data-key="{{item.key}}">
+        <text>{{item.label}}</text>
+      </button>
+    </view>
+
+    <view class="control-device-list">
+      <button wx:for="{{filteredControlDevices}}" wx:key="id" class="control-device-item {{item.tone}} {{selectedDeviceId == item.id ? 'selected' : ''}}" bindtap="selectDevice" data-id="{{item.id}}">
+        <view class="device-tone-bar"></view>
+        <view class="device-icon-bubble">
+          <image src="{{item.iconPath}}" mode="aspectFit"></image>
+        </view>
+        <view class="device-pick-info">
+          <view class="device-pick-title-row">
+            <text class="device-pick-id">{{item.id}}</text>
+            <text class="device-pick-state {{item.tone}}">{{item.healthLabel}} · {{item.statusLabel}}</text>
+          </view>
+          <view class="device-pick-line">
+            <text class="device-pick-area">{{item.group}} · {{item.area}}</text>
+            <text class="device-online {{item.online ? 'online' : 'offline'}}">{{item.onlineLabel}}</text>
+          </view>
+          <view class="device-pick-line device-pick-metrics">
+            <text class="device-battery {{item.tone}}">电量 {{item.batteryLabel}}</text>
+            <text class="device-signal-text">{{item.signalLabel}}</text>
+          </view>
+        </view>
+        <text class="device-pick-arrow">›</text>
+      </button>
+      <view wx:if="{{filteredControlDevices.length == 0}}" class="device-empty">
+        <text>当前筛选下暂无设备</text>
+      </view>
+    </view>
+
+    <view class="device-picker-footer">
+      <view class="footer-total">
+        <text class="footer-pulse">⌁</text>
+        <text>共 {{deviceStats.total}} 台设备</text>
+      </view>
+      <view class="footer-stats">
+        <text class="footer-dot normal"></text><text>正常 {{deviceStats.normal}}</text>
+        <text class="footer-dot abnormal"></text><text>异常 {{deviceStats.abnormal}}</text>
+        <text class="footer-dot offline"></text><text>离线 {{deviceStats.offline}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="custom-nav">
+    <button wx:for="{{navItems}}" wx:key="page" class="nav-item {{currentPage == item.page ? 'active' : ''}}" bindtap="switchTab" data-url="{{item.url}}">
+      <image class="nav-icon-img" src="{{item.iconPath}}" mode="aspectFit"></image>
+      <text class="nav-label">{{item.text}}</text>
+    </button>
+  </view>
+</view>

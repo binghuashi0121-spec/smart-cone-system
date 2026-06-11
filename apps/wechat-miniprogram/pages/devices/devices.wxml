@@ -1,0 +1,206 @@
+<view class="app-page devices-page">
+  <view class="device-topbar">
+    <view class="title-row">
+      <image class="cone-logo" src="/assets/icons/pages/devices/traffic-cone.svg" mode="aspectFit"></image>
+      <view class="title-copy">
+        <text class="page-title">设备管理中心</text>
+        <text class="page-subtitle">实时监测设备运行状态</text>
+      </view>
+    </view>
+
+    <view class="device-toolbar">
+      <view class="device-search">
+        <text class="search-symbol">⌕</text>
+        <input value="{{searchKeyword}}" bindinput="onDeviceSearch" placeholder="搜索设备编号、区域名称" placeholder-class="search-placeholder" />
+      </view>
+      <button class="tool-btn {{showFilterPanel ? 'active' : ''}}" bindtap="toggleFilterPanel">
+        <image src="/assets/icons/pages/devices/filter.svg" mode="aspectFit"></image>
+        <text>筛选</text>
+      </button>
+      <button class="tool-btn {{showSortPanel ? 'active' : ''}}" bindtap="toggleSortPanel">
+        <text class="sort-symbol">⇅</text>
+        <text>排序</text>
+      </button>
+    </view>
+
+    <view class="dashboard-stats">
+      <view wx:for="{{dashboardStats}}" wx:key="key" class="stat-card {{item.tone}}">
+        <text class="stat-label">{{item.label}}</text>
+        <view class="stat-value-row">
+          <text class="stat-value">{{item.value}}</text>
+          <text wx:if="{{item.unit}}" class="stat-unit">{{item.unit}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{showFilterPanel}}" class="filter-panel glass-panel">
+      <view class="panel-line">
+        <text class="panel-label">状态</text>
+        <view class="chip-row">
+          <button wx:for="{{statusFilters}}" wx:key="key" class="filter-chip {{statusFilter == item.key ? 'active' : ''}}" bindtap="selectStatusFilter" data-key="{{item.key}}">{{item.label}}</button>
+        </view>
+      </view>
+      <view class="panel-line">
+        <text class="panel-label">区域</text>
+        <view class="chip-row">
+          <button wx:for="{{groupFilters}}" wx:key="key" class="filter-chip {{groupFilter == item.key ? 'active' : ''}}" bindtap="selectGroupFilter" data-key="{{item.key}}">{{item.label}}</button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{showSortPanel}}" class="sort-panel glass-panel">
+      <button wx:for="{{sortOptions}}" wx:key="key" class="sort-chip {{sortMode == item.key ? 'active' : ''}}" bindtap="selectSortMode" data-key="{{item.key}}">{{item.label}}</button>
+    </view>
+  </view>
+
+  <scroll-view class="device-scroll" scroll-y="true" enhanced="true" show-scrollbar="false">
+    <view class="list-section-head">
+      <view>
+        <text>设备运行列表</text>
+        <label>{{filteredDevices.length}} 台设备</label>
+      </view>
+      <button class="mini-action" bindtap="runNearbyDiagnosis">{{diagnosisRunning ? '诊断中' : '链路诊断'}}</button>
+    </view>
+
+    <view wx:if="{{diagnosisSummary}}" class="diagnosis-banner">
+      <text>{{diagnosisSummary}}</text>
+    </view>
+
+    <view wx:for="{{filteredDevices}}" wx:key="id" class="monitor-device-card {{item.stateClass}} {{item.expanded ? 'expanded' : ''}}" bindtap="toggleDevice" data-id="{{item.id}}">
+      <view class="status-rail"></view>
+      <view class="device-icon-wrap {{item.stateClass}}">
+        <image src="{{item.iconPath}}" mode="aspectFit"></image>
+      </view>
+
+      <view class="identity-block">
+        <text class="device-id">{{item.id}}</text>
+        <text class="device-area">{{item.groupArea}}</text>
+      </view>
+
+      <view class="state-block {{item.stateClass}}">
+        <view class="state-line">
+          <text class="state-dot"></text>
+          <text>{{item.stateText}}</text>
+        </view>
+        <text class="state-sub">{{item.online ? '在线监测中' : '等待重连'}}</text>
+      </view>
+
+      <view class="metric-block">
+        <view class="signal-bars">
+          <text wx:for="{{signalBars}}" wx:for-item="bar" wx:key="*this" class="signal-bar {{item.signalLevel >= bar ? 'active' : ''}}"></text>
+        </view>
+        <view class="battery-wrap {{item.stateClass}}">
+          <view class="battery-shell">
+            <view class="battery-fill" style="width: {{item.batteryWidth}}%;"></view>
+          </view>
+          <text>{{item.batteryDisplay}}</text>
+        </view>
+      </view>
+
+      <view class="detail-arrow">›</view>
+
+      <view wx:if="{{item.expanded}}" class="device-detail-drawer" catchtap="noop">
+        <view>
+          <text class="detail-label">连接方式</text>
+          <text>{{item.connection}}</text>
+        </view>
+        <view>
+          <text class="detail-label">定位状态</text>
+          <text>{{item.locationStatus}}</text>
+        </view>
+        <view>
+          <text class="detail-label">蓝牙状态</text>
+          <text>{{item.bluetoothStatus}}</text>
+        </view>
+        <view>
+          <text class="detail-label">最近同步</text>
+          <text>{{item.lastSync}}</text>
+        </view>
+        <button catchtap="deviceAction" data-type="control" data-id="{{item.id}}">
+          <image class="ui-icon" src="/assets/icons/pages/devices/single-control.svg" mode="aspectFit"></image>
+          <text>进入单设备控制</text>
+        </button>
+      </view>
+    </view>
+
+    <view wx:if="{{filteredDevices.length == 0}}" class="empty-device">
+      <text>暂无符合条件的设备</text>
+      <label>请调整筛选或搜索条件</label>
+    </view>
+  </scroll-view>
+
+  <view class="fixed-status-bar">
+    <view wx:for="{{bottomStats}}" wx:key="label" class="bottom-stat {{item.tone}}">
+      <text class="bottom-dot"></text>
+      <text>{{item.label}}</text>
+      <label>{{item.value}}</label>
+    </view>
+  </view>
+
+  <view wx:if="{{showBluetoothSheet}}" class="sheet-mask bluetooth-mask" bindtap="closeBluetoothSheet"></view>
+  <view wx:if="{{showBluetoothSheet}}" class="bluetooth-sheet">
+    <view class="bt-head">
+      <view class="bt-title">
+        <image class="ui-icon" src="/assets/icons/pages/devices/bluetooth.svg" mode="aspectFit"></image>
+        <view>
+          <text>添加蓝牙路锥</text>
+          <text class="muted">预留真实 BLE 设备接入流程</text>
+        </view>
+      </view>
+      <button class="close-btn bt-close" bindtap="closeBluetoothSheet">
+        <image class="ui-icon" src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image>
+      </button>
+    </view>
+
+    <view class="bt-radar">
+      <view class="radar-core {{bluetoothScanning ? 'scanning' : ''}}">
+        <view class="bt-halo halo-one"></view>
+        <view class="bt-halo halo-two"></view>
+        <view class="bt-halo halo-three"></view>
+        <view class="bt-orbit"></view>
+        <image src="/assets/icons/pages/devices/bluetooth.svg" mode="aspectFit"></image>
+      </view>
+      <text>{{bluetoothScanning ? '正在扫描附近路锥...' : bluetoothDevices.length ? '发现可用蓝牙路锥' : '准备连接蓝牙路锥'}}</text>
+    </view>
+
+    <view class="bt-steps">
+      <view wx:for="{{steps}}" wx:key="text" class="bt-step {{bluetoothStep >= index + 1 ? 'active' : ''}}">
+        <text>{{index + 1}}</text>
+        <label>{{item.text}}</label>
+      </view>
+    </view>
+
+    <view wx:if="{{bluetoothScanning}}" class="scan-progress"><view></view></view>
+
+    <view class="bt-list">
+      <button wx:for="{{bluetoothDevices}}" wx:key="id" class="bt-device {{selectedBluetoothDevice && selectedBluetoothDevice.id == item.id ? 'selected' : ''}}" bindtap="selectBluetoothDevice" data-id="{{item.id}}">
+        <view>
+          <text class="bt-device-name">{{item.name}}</text>
+          <text class="muted">RSSI {{item.rssi}} · {{item.distance}}</text>
+        </view>
+        <text class="bt-device-status">{{item.status}}</text>
+      </button>
+      <view wx:if="{{!bluetoothScanning && bluetoothDevices.length == 0}}" class="bt-empty">
+        <text>点击开始扫描，查找附近未绑定路锥。</text>
+      </view>
+    </view>
+
+    <view class="bt-actions">
+      <button class="ghost-btn blue" bindtap="startBluetoothScan">
+        <image class="ui-icon" src="/assets/icons/pages/devices/scan-device.svg" mode="aspectFit"></image>
+        <text>{{bluetoothScanning ? '扫描中' : '开始扫描'}}</text>
+      </button>
+      <button class="primary-btn" bindtap="bindBluetoothDevice">
+        <image class="ui-icon" src="/assets/icons/pages/devices/add-device.svg" mode="aspectFit"></image>
+        <text>绑定设备</text>
+      </button>
+    </view>
+  </view>
+
+  <view class="custom-nav">
+    <button wx:for="{{navItems}}" wx:key="page" class="nav-item {{currentPage == item.page ? 'active' : ''}}" bindtap="switchTab" data-url="{{item.url}}">
+      <image class="nav-icon-img" src="{{item.iconPath}}" mode="aspectFit"></image>
+      <text class="nav-label">{{item.text}}</text>
+    </button>
+  </view>
+</view>
