@@ -150,7 +150,7 @@
       </view>
       <view class="map-online">
         <image class="dot-icon" src="/assets/icons/pages/index/online-dot.svg" mode="aspectFit"></image>
-        <text>在线</text><text class="strong">18/20</text>
+        <text>在线</text><text class="strong">{{stats.online}}/{{stats.total}}</text>
       </view>
       <button class="close-btn" bindtap="closeMapDetail"><image class="ui-icon" src="/assets/icons/pages/index/x.svg" mode="aspectFit"></image></button>
     </view>
@@ -253,7 +253,7 @@
       <text class="device-field device-status-field">当前状态：{{activeDevice.online ? '在线' : '离线'}} · {{activeDevice.statusLabel}}</text>
       <text class="device-field device-battery-field">电量：{{activeDevice.battery}}%</text>
       <text class="device-field device-posture-field">姿态：{{activeDevice.posture}}</text>
-      <text class="device-field">定位状态：{{activeDevice.online ? '定位正常' : '未定位'}}</text>
+      <text class="device-field">定位状态：{{activeDevice.locating ? '定位中' : activeDevice.online ? '定位正常' : '未定位'}}</text>
       <text class="device-field">当前模式：{{task.mode}}</text>
       <text class="device-field">信号强度：{{activeDevice.signal}}格</text>
       <text class="device-field">所属分组：{{activeDevice.group}}</text>

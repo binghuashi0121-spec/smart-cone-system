@@ -1,4 +1,5 @@
 const mock = require('../../utils/mock.js')
+const deviceData = require('../../utils/device-data.js')
 
 const warningModeLabels = {
   normal: '常规施工',
@@ -28,6 +29,15 @@ function coneStatusMeta(item) {
   const isLowBatteryCritical = item.status === 'lowBattery' && item.online && item.battery > 0 && item.battery < 20
   const isShifted = item.id === 'C07'
   const isTilted = item.status === 'tilted'
+
+  if (item.locating) {
+    return {
+      isLowBatteryCritical: false,
+      mapTone: 'normal',
+      statusTone: 'normal',
+      statusLabel: '定位中'
+    }
+  }
 
   if (isTilted) {
     return {
@@ -95,21 +105,75 @@ function alertSheetMeta(alert, tone = 'danger') {
   }
 }
 
-const cones = mock.cones.map(item => {
-  const meta = coneStatusMeta(item)
-  return {
-    ...item,
-    ...meta,
-    iconPath: coneIconPath(item, meta.mapTone)
-  }
-})
-
-const derivedStats = {
-  ...mock.stats,
-  lowBattery: cones.filter(item => item.isLowBatteryCritical).length,
-  tilted: cones.filter(item => item.mapTone === 'tilted').length,
-  shifted: cones.filter(item => item.mapTone === 'shifted').length
+function decorateCones(list) {
+  return list.map(item => {
+    const meta = coneStatusMeta(item)
+    return {
+      ...item,
+      ...meta,
+      iconPath: coneIconPath(item, meta.mapTone)
+    }
+  })
 }
+
+function deviceConeId(item) {
+  const source = item.name || item.deviceId || ''
+  const matched = String(source).match(/(\d{1,3})$/)
+  if (!matched) return mock.cones[0].id
+  return 'C' + matched[1].padStart(2, '0').slice(-2)
+}
+
+function buildRealtimeCones() {
+  const app = getApp()
+  const realtimeMap = app.globalData.deviceGpsData || {}
+  const entries = Object.keys(realtimeMap).map(key => realtimeMap[key]).filter(Boolean)
+  if (!deviceData.getBluetoothConfig().useRealBluetooth || !entries.length) {
+    return decorateCones(mock.cones)
+  }
+  const base = mock.cones.map(item => ({
+    ...item,
+    battery: 0,
+    online: false,
+    status: 'offline',
+    signal: 0
+  }))
+  entries.forEach(item => {
+    const id = deviceConeId(item)
+    const index = base.findIndex(cone => cone.id === id)
+    const targetIndex = index >= 0 ? index : 0
+    const battery = typeof item.bat === 'number' ? item.bat : base[targetIndex].battery
+    base[targetIndex] = {
+      ...base[targetIndex],
+      deviceId: item.deviceId,
+      name: item.name || base[targetIndex].name,
+      lat: item.lat,
+      lon: item.lon,
+      fix: item.fix,
+      battery,
+      online: !!item.online,
+      locating: !!item.locating,
+      status: item.online ? battery > 0 && battery < 20 ? 'lowBattery' : 'normal' : 'offline',
+      signal: item.online ? 5 : 0,
+      updatedAt: item.updatedAt
+    }
+  })
+  return decorateCones(base)
+}
+
+function buildStats(items) {
+  return {
+    ...mock.stats,
+    online: items.filter(item => item.online).length,
+    total: items.length,
+    lowBattery: items.filter(item => item.isLowBatteryCritical).length,
+    tilted: items.filter(item => item.mapTone === 'tilted').length,
+    shifted: items.filter(item => item.mapTone === 'shifted').length
+  }
+}
+
+const cones = decorateCones(mock.cones)
+
+const derivedStats = buildStats(cones)
 
 function readWarningMode() {
   const app = getApp()
@@ -118,6 +182,15 @@ function readWarningMode() {
   const mode = warningModeLabels[appMode] ? appMode : warningModeLabels[storageMode] ? storageMode : 'night'
   app.globalData.warningMode = mode
   return mode
+}
+
+function buildTask(baseTask, mode, stats) {
+  return {
+    ...baseTask,
+    mode: warningModeLabels[mode],
+    online: stats.online,
+    total: stats.total
+  }
 }
 
 Page({
@@ -141,22 +214,31 @@ Page({
   },
 
   onLoad() {
-    this.applyWarningMode()
+    this.refreshRealtimeGps()
   },
 
   onShow() {
-    this.applyWarningMode()
+    this.refreshRealtimeGps()
+  },
+
+  refreshRealtimeGps() {
+    const mode = readWarningMode()
+    const nextCones = buildRealtimeCones()
+    const nextStats = buildStats(nextCones)
+    const activeDevice = nextCones.find(item => item.id === this.data.activeDevice.id) || nextCones[0]
+    this.setData({
+      activeWarningMode: mode,
+      cones: nextCones,
+      detailCones: nextCones.filter(item => item.online),
+      previewCones: previewConeList(nextCones),
+      stats: nextStats,
+      activeDevice,
+      task: buildTask(this.data.task, mode, nextStats)
+    })
   },
 
   applyWarningMode() {
-    const mode = readWarningMode()
-    this.setData({
-      activeWarningMode: mode,
-      task: {
-        ...this.data.task,
-        mode: warningModeLabels[mode]
-      }
-    })
+    this.refreshRealtimeGps()
   },
 
   switchTab(e) {
@@ -212,7 +294,7 @@ Page({
 
   openDeviceDetail(e) {
     const id = e.currentTarget.dataset.id
-    const device = cones.find(item => item.id === id) || cones[0]
+    const device = this.data.cones.find(item => item.id === id) || this.data.cones[0]
     this.setData({
       showDeviceDetail: true,
       activeDevice: device,
@@ -225,8 +307,9 @@ Page({
   },
 
   goControl() {
-    getApp().globalData.selectedDeviceId = this.data.activeDevice.id
-    wx.redirectTo({ url: '/pages/control/control?device=' + this.data.activeDevice.id })
+    const deviceId = this.data.activeDevice.deviceId || this.data.activeDevice.id
+    getApp().globalData.selectedDeviceId = deviceId
+    wx.redirectTo({ url: '/pages/control/control?device=' + deviceId })
   },
 
   goConnectDevice() {
@@ -247,6 +330,7 @@ Page({
   },
 
   refreshLocation() {
+    this.refreshRealtimeGps()
     this.showToast('定位已刷新')
   },
 

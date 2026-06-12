@@ -3,6 +3,8 @@ App({
   globalData: {
     selectedDeviceId: '',
     controlScope: 'all',
-    warningMode: 'night'
+    warningMode: 'night',
+    deviceGpsData: {},
+    bleConnected: false
   }
 })

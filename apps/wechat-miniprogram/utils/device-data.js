@@ -1,10 +1,21 @@
 const mock = require('./mock.js')
 
 const bluetoothConfig = {
-  useRealBluetooth: false,
+  useRealBluetooth: true,
   discoveryDuration: 1800,
+  serviceId: '0000FFE0-0000-1000-8000-00805F9B34FB',
+  characteristicId: '0000FFE1-0000-1000-8000-00805F9B34FB',
+  controlCharacteristicId: '0000FFE2-0000-1000-8000-00805F9B34FB',
+  deviceInfoCharacteristicId: '0000FFE3-0000-1000-8000-00805F9B34FB'
+}
+
+const bleState = {
+  connectedDeviceId: '',
+  connectedDeviceName: '',
   serviceId: '',
-  characteristicId: ''
+  notifyCharacteristicId: '',
+  controlCharacteristicId: '',
+  listenerReady: false
 }
 
 const bluetoothMockDevices = [
@@ -49,11 +60,20 @@ function wait(delay) {
   })
 }
 
+function normalizeUuid(uuid) {
+  return String(uuid || '').toUpperCase()
+}
+
 function distanceFromRssi(rssi) {
   if (typeof rssi !== 'number') return '未知'
   if (rssi >= -50) return '约 1m'
   if (rssi >= -65) return '约 3m'
   return '约 6m+'
+}
+
+function isConeBleDevice(device) {
+  const name = device && (device.name || device.localName || '')
+  return name.indexOf('STC-CONE') !== -1 || name.indexOf('ESP_GPS') !== -1
 }
 
 function normalizeBluetoothDevice(device) {
@@ -70,8 +90,95 @@ function normalizeBluetoothDevice(device) {
   }
 }
 
+function ab2str(buffer) {
+  return String.fromCharCode.apply(null, new Uint8Array(buffer))
+}
+
+function str2ab(str) {
+  const buffer = new ArrayBuffer(str.length)
+  const dataView = new Uint8Array(buffer)
+  for (let i = 0; i < str.length; i += 1) {
+    dataView[i] = str.charCodeAt(i)
+  }
+  return buffer
+}
+
+function getGlobalData() {
+  const app = typeof getApp === 'function' ? getApp() : null
+  return app ? app.globalData : null
+}
+
+function ensureGlobalBleStore() {
+  const globalData = getGlobalData()
+  if (!globalData) return null
+  if (!globalData.deviceGpsData) globalData.deviceGpsData = {}
+  return globalData
+}
+
+function updateConnectionState(connected, deviceId) {
+  const globalData = ensureGlobalBleStore()
+  if (!globalData) return
+  globalData.bleConnected = connected
+  if (!connected && deviceId && globalData.deviceGpsData[deviceId]) {
+    globalData.deviceGpsData[deviceId] = {
+      ...globalData.deviceGpsData[deviceId],
+      online: false,
+      locating: false,
+      updatedAt: Date.now()
+    }
+  }
+}
+
+function saveGpsData(deviceId, payload) {
+  const globalData = ensureGlobalBleStore()
+  if (!globalData || !deviceId) return
+  const hasFix = payload.fix === 'A' && typeof payload.lat === 'number' && typeof payload.lon === 'number'
+  globalData.deviceGpsData[deviceId] = {
+    ...(globalData.deviceGpsData[deviceId] || {}),
+    deviceId,
+    name: bleState.connectedDeviceName,
+    lat: payload.lat,
+    lon: payload.lon,
+    fix: payload.fix || 'V',
+    bat: typeof payload.bat === 'number' ? payload.bat : undefined,
+    online: true,
+    locating: !hasFix,
+    updatedAt: Date.now()
+  }
+}
+
+function setupBleListeners() {
+  if (bleState.listenerReady || typeof wx === 'undefined') return
+  if (typeof wx.onBLECharacteristicValueChange === 'function') {
+    wx.onBLECharacteristicValueChange(res => {
+      if (!res || normalizeUuid(res.characteristicId) !== normalizeUuid(bleState.notifyCharacteristicId)) return
+      try {
+        const text = ab2str(res.value)
+        const payload = JSON.parse(text)
+        saveGpsData(res.deviceId || bleState.connectedDeviceId, payload)
+      } catch (error) {
+        console.warn('parse ble gps data failed', error)
+      }
+    })
+  }
+  if (typeof wx.onBLEConnectionStateChange === 'function') {
+    wx.onBLEConnectionStateChange(res => {
+      if (!res || res.deviceId !== bleState.connectedDeviceId) return
+      updateConnectionState(!!res.connected, res.deviceId)
+      if (!res.connected) {
+        bleState.connectedDeviceId = ''
+      }
+    })
+  }
+  bleState.listenerReady = true
+}
+
 function configureDeviceData(options) {
   Object.assign(bluetoothConfig, options || {})
+}
+
+function getBluetoothConfig() {
+  return { ...bluetoothConfig }
 }
 
 function getDevices() {
@@ -120,7 +227,7 @@ function scanRealBluetoothDevices() {
     .then(result => {
       wxPromise('stopBluetoothDevicesDiscovery').catch(() => {})
       return (result.devices || [])
-        .filter(item => item.name || item.localName)
+        .filter(item => (item.name || item.localName) && isConeBleDevice(item))
         .map(item => normalizeBluetoothDevice(item))
     })
     .catch(error => {
@@ -129,29 +236,91 @@ function scanRealBluetoothDevices() {
     })
 }
 
+function findService(services) {
+  const targetId = normalizeUuid(bluetoothConfig.serviceId)
+  return (services || []).find(item => normalizeUuid(item.uuid) === targetId)
+}
+
+function findCharacteristic(characteristics, uuid, propName) {
+  const targetId = normalizeUuid(uuid)
+  return (characteristics || []).find(item => normalizeUuid(item.uuid) === targetId)
+    || (characteristics || []).find(item => item.properties && item.properties[propName])
+}
+
 function connectRealBluetoothDevice(device) {
   const target = normalizeBluetoothDevice(device || {})
   if (!target.deviceId) {
     return Promise.reject(new Error('missing bluetooth deviceId'))
   }
 
-  return wxPromise('createBLEConnection', { deviceId: target.deviceId })
-    .then(() => syncBoundDevice(target))
-    .then(result => ({
-      success: true,
-      deviceId: target.deviceId,
-      serviceId: bluetoothConfig.serviceId,
-      characteristicId: bluetoothConfig.characteristicId,
-      message: result.message || '蓝牙设备已连接'
-    }))
+  setupBleListeners()
+  return wxPromise('openBluetoothAdapter')
+    .then(() => wxPromise('createBLEConnection', { deviceId: target.deviceId }))
+    .then(() => wxPromise('getBLEDeviceServices', { deviceId: target.deviceId }))
+    .then(serviceResult => {
+      const service = findService(serviceResult.services)
+      if (!service) throw new Error('target BLE service not found')
+      bleState.serviceId = service.uuid
+      return wxPromise('getBLEDeviceCharacteristics', {
+        deviceId: target.deviceId,
+        serviceId: service.uuid
+      })
+    })
+    .then(charResult => {
+      const notifyChar = findCharacteristic(charResult.characteristics, bluetoothConfig.characteristicId, 'notify')
+      const controlChar = findCharacteristic(charResult.characteristics, bluetoothConfig.controlCharacteristicId, 'write')
+      if (!notifyChar) throw new Error('notify characteristic not found')
+      if (!controlChar) throw new Error('control characteristic not found')
+      bleState.connectedDeviceId = target.deviceId
+      bleState.connectedDeviceName = target.name
+      bleState.notifyCharacteristicId = notifyChar.uuid
+      bleState.controlCharacteristicId = controlChar.uuid
+      return wxPromise('notifyBLECharacteristicValueChange', {
+        deviceId: target.deviceId,
+        serviceId: bleState.serviceId,
+        characteristicId: notifyChar.uuid,
+        state: true
+      })
+    })
+    .then(() => {
+      const globalData = ensureGlobalBleStore()
+      if (globalData) {
+        globalData.deviceGpsData[target.deviceId] = {
+          ...(globalData.deviceGpsData[target.deviceId] || {}),
+          deviceId: target.deviceId,
+          name: target.name,
+          online: true,
+          locating: true,
+          updatedAt: Date.now()
+        }
+      }
+      updateConnectionState(true, target.deviceId)
+      return {
+        success: true,
+        deviceId: target.deviceId,
+        serviceId: bleState.serviceId,
+        characteristicId: bleState.notifyCharacteristicId,
+        controlCharacteristicId: bleState.controlCharacteristicId,
+        message: '蓝牙设备已连接'
+      }
+    })
 }
 
-function syncBoundDevice(device) {
-  return Promise.resolve({
-    success: true,
-    deviceId: device.deviceId,
-    message: '蓝牙设备已连接'
-  })
+function writeControlCommand(command, deviceId) {
+  if (!bluetoothConfig.useRealBluetooth) {
+    return resolveLater({ success: true, mock: true }, 120)
+  }
+  const targetDeviceId = deviceId || bleState.connectedDeviceId
+  if (!targetDeviceId || !bleState.serviceId || !bleState.controlCharacteristicId) {
+    return Promise.reject(new Error('BLE device is not connected'))
+  }
+  const payload = typeof command === 'string' ? command : JSON.stringify(command)
+  return wxPromise('writeBLECharacteristicValue', {
+    deviceId: targetDeviceId,
+    serviceId: bleState.serviceId,
+    characteristicId: bleState.controlCharacteristicId,
+    value: str2ab(payload)
+  }).then(() => ({ success: true, deviceId: targetDeviceId, payload }))
 }
 
 function runNearbyDiagnosis() {
@@ -168,6 +337,7 @@ function runNearbyDiagnosis() {
 
 module.exports = {
   configureDeviceData,
+  getBluetoothConfig,
   getDevices,
   scanBluetoothDevices,
   bindBluetoothDevice,
@@ -175,5 +345,7 @@ module.exports = {
   bindNetworkDevice,
   scanRealBluetoothDevices,
   connectRealBluetoothDevice,
-  runNearbyDiagnosis
+  writeControlCommand,
+  runNearbyDiagnosis,
+  ab2str
 }

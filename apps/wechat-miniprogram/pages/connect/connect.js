@@ -33,6 +33,11 @@ function normalizeDevice(item, channel) {
   }
 }
 
+function isTargetBleDevice(item) {
+  const name = item && item.name ? item.name : ''
+  return name.indexOf('STC-CONE') !== -1 || name.indexOf('ESP_GPS') !== -1
+}
+
 Page({
   data: {
     channels,
@@ -89,7 +94,8 @@ Page({
     })
 
     scanTask.then(list => {
-      const devices = (list || []).map(item => normalizeDevice(item, channel))
+      const sourceList = channel === 'bluetooth' ? (list || []).filter(item => isTargetBleDevice(item)) : (list || [])
+      const devices = sourceList.map(item => normalizeDevice(item, channel))
       this.setData({
         scanning: false,
         nearbyDevices: devices,
@@ -155,6 +161,11 @@ Page({
         statusSub: selectedDevice.name + ' 已完成入网配置'
       })
       wx.showToast({ title: '设备已绑定', icon: 'success' })
+      if (this.data.selectedChannel === 'bluetooth') {
+        setTimeout(() => {
+          wx.redirectTo({ url: '/pages/index/index' })
+        }, 500)
+      }
     }).catch(() => {
       this.setData({
         binding: false,

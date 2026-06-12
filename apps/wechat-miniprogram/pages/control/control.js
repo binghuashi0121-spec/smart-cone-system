@@ -1,4 +1,5 @@
 const mock = require('../../utils/mock.js')
+const deviceData = require('../../utils/device-data.js')
 
 const navItems = mock.navItems.map(item => ({
   ...item,
@@ -126,6 +127,14 @@ function initialWarningMode() {
   return modeLabels[appMode] ? appMode : modeLabels[storageMode] ? storageMode : 'night'
 }
 
+function bleWriteDeviceId(id) {
+  return /^C\d{2}$/.test(id || '') ? '' : id
+}
+
+function canWriteBle() {
+  return deviceData.getBluetoothConfig().useRealBluetooth && getApp().globalData.bleConnected
+}
+
 Page({
   data: {
     currentPage: 'control',
@@ -170,6 +179,7 @@ Page({
     if (device) {
       this.setData({
         ...deviceMeta(device),
+        selectedDeviceId: device,
         selectedScope: 'single',
         feedback: '已进入' + device + '单设备控制',
         feedbackSub: '当前仅调整该设备参数'
@@ -266,6 +276,26 @@ Page({
   },
 
   sendCommand() {
+    const selectedMode = this.data.selectedMode
+    const command = { cmd: 'set_mode', mode: selectedMode }
+    if (canWriteBle()) {
+      deviceData.writeControlCommand(command, bleWriteDeviceId(this.data.selectedDeviceId)).then(() => {
+        getApp().globalData.warningMode = selectedMode
+        wx.setStorageSync('warningMode', selectedMode)
+        this.setData({
+          feedback: this.data.selectedScope === 'single' ? '已向' + this.data.selectedDeviceId + '下发单设备指令' : '已通过 BLE 下发控制指令',
+          feedbackSub: modeLabels[selectedMode] + '已写入路锥控制特征'
+        })
+        wx.showToast({ title: '控制指令已下发', icon: 'success' })
+      }).catch(() => {
+        this.setData({
+          feedback: 'BLE 指令下发失败',
+          feedbackSub: '请确认设备仍在连接范围内后重试'
+        })
+        wx.showToast({ title: 'BLE 指令下发失败', icon: 'none' })
+      })
+      return
+    }
     if (this.data.selectedScope === 'single') {
       const selectedDevice = this.data.selectedDevice || findDevice(this.data.selectedDeviceId)
       const isOffline = selectedDevice && !selectedDevice.online
@@ -276,7 +306,6 @@ Page({
       wx.showToast({ title: isOffline ? '离线设备指令已暂存' : '单设备指令已下发', icon: isOffline ? 'none' : 'success' })
       return
     }
-    const selectedMode = this.data.selectedMode
     getApp().globalData.warningMode = selectedMode
     wx.setStorageSync('warningMode', selectedMode)
     this.setData({

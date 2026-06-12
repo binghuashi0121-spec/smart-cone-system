@@ -41,12 +41,16 @@
 ///Declare static functions
 static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
-#define GATTS_SERVICE_UUID_TEST_A   0x00FF
-#define GATTS_CHAR_UUID_TEST_A      0xFF01
+#define GATTS_SERVICE_UUID_TEST_A   0xFFE0
+#define GATTS_GPS_CHAR_UUID         0xFFE1
+#define GATTS_CONTROL_CHAR_UUID     0xFFE2
+#define GATTS_DEVICE_INFO_CHAR_UUID 0xFFE3
 #define GATTS_DESCR_UUID_TEST_A     0x3333
-#define GATTS_NUM_HANDLE_TEST_A     4
+#define GATTS_NUM_HANDLE_TEST_A     8
 
-#define TEST_DEVICE_NAME            "ESP_GPS_BLE"
+#define TEST_DEVICE_NAME            "STC-CONE-001"
+#define TEST_FW_VERSION             "1.0.0"
+#define DEFAULT_BATTERY_PERCENT     85
 #define TEST_MANUFACTURER_DATA_LEN  17
 
 #define GATTS_DEMO_CHAR_VAL_LEN_MAX 0x40
@@ -55,6 +59,11 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 
 static uint8_t char1_str[] = {0x11, 0x22, 0x33};
 static esp_gatt_char_prop_t a_property = 0;
+static uint16_t gps_char_handle = 0;
+static uint16_t gps_descr_handle = 0;
+static uint16_t control_char_handle = 0;
+static uint16_t device_info_char_handle = 0;
+static uint16_t adding_char_uuid = 0;
 
 static esp_attr_value_t gatts_demo_char1_val =
 {
@@ -80,17 +89,14 @@ static uint8_t raw_scan_rsp_data[] = {
 
 static uint8_t adv_service_uuid128[32] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
-    //first uuid, 16bit, [12],[13] is the value
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
-    //second uuid, 32bit, [12], [13], [14], [15] is the value
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
+    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xe0, 0xff, 0x00, 0x00,
 };
 
 // The length of adv data must be less than 31 bytes
 //static uint8_t test_manufacturer[TEST_MANUFACTURER_DATA_LEN] =  {0x12, 0x23, 0x45, 0x56};
 static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp = false,
-    .include_name = true,
+    .include_name = false,
     .include_txpower = false,
     .min_interval = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
     .max_interval = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
@@ -99,7 +105,7 @@ static esp_ble_adv_data_t adv_data = {
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
     .service_data_len = 0,
     .p_service_data = NULL,
-    .service_uuid_len = sizeof(adv_service_uuid128),
+    .service_uuid_len = 16,
     .p_service_uuid = adv_service_uuid128,
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
@@ -115,8 +121,8 @@ static esp_ble_adv_data_t scan_rsp_data = {
     .p_manufacturer_data =  NULL, //&test_manufacturer[0],
     .service_data_len = 0,
     .p_service_data = NULL,
-    .service_uuid_len = sizeof(adv_service_uuid128),
-    .p_service_uuid = adv_service_uuid128,
+    .service_uuid_len = 0,
+    .p_service_uuid = NULL,
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 
@@ -166,6 +172,22 @@ static prepare_type_env_t a_prepare_write_env;
 
 void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
 void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
+
+static int read_battery_percent(void)
+{
+    return DEFAULT_BATTERY_PERCENT;
+}
+
+static esp_err_t add_profile_char(uint16_t uuid16, esp_gatt_char_prop_t property, esp_gatt_perm_t perm)
+{
+    esp_bt_uuid_t char_uuid = {
+        .len = ESP_UUID_LEN_16,
+        .uuid.uuid16 = uuid16,
+    };
+    adding_char_uuid = uuid16;
+    return esp_ble_gatts_add_char(gl_profile_tab[PROFILE_A_APP_ID].service_handle, &char_uuid,
+                                  perm, property, &gatts_demo_char1_val, NULL);
+}
 
 // GPS UART Config
 #define GPS_UART_NUM          UART_NUM_1
@@ -252,13 +274,14 @@ static void gps_task(void *pvParameters) {
                         ESP_LOGI(GATTS_TAG, "GPS Fixed! Lat: %.6f, Lon: %.6f", gps_info.latitude, gps_info.longitude);
                         
                         // Send to BLE
-                        if (gl_profile_tab[PROFILE_A_APP_ID].conn_id != 0xffff) {
-                            char ble_data[64];
-                            snprintf(ble_data, sizeof(ble_data), "LAT:%.6f,LON:%.6f", gps_info.latitude, gps_info.longitude);
+                        if (gl_profile_tab[PROFILE_A_APP_ID].conn_id != 0xffff && gps_char_handle != 0) {
+                            char ble_data[96];
+                            snprintf(ble_data, sizeof(ble_data), "{\"lat\":%.6f,\"lon\":%.6f,\"fix\":\"%c\",\"bat\":%d}",
+                                     gps_info.latitude, gps_info.longitude, gps_info.status, read_battery_percent());
                             ESP_LOGI(GATTS_TAG, "Sending GPS data to BLE: %s", ble_data);
                             esp_ble_gatts_send_indicate(gl_profile_tab[PROFILE_A_APP_ID].gatts_if, 
                                                        gl_profile_tab[PROFILE_A_APP_ID].conn_id,
-                                                       gl_profile_tab[PROFILE_A_APP_ID].char_handle,
+                                                       gps_char_handle,
                                                        strlen(ble_data), (uint8_t*)ble_data, false);
                         } else {
                             ESP_LOGW(GATTS_TAG, "GPS Fixed but BLE not connected, data not sent");
@@ -395,11 +418,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         esp_gatt_rsp_t rsp;
         memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
         rsp.attr_value.handle = param->read.handle;
-        rsp.attr_value.len = 4;
-        rsp.attr_value.value[0] = 0xde;
-        rsp.attr_value.value[1] = 0xed;
-        rsp.attr_value.value[2] = 0xbe;
-        rsp.attr_value.value[3] = 0xef;
+        if (param->read.handle == device_info_char_handle) {
+            char device_info[64];
+            snprintf(device_info, sizeof(device_info), "{\"id\":\"%s\",\"bat\":%d,\"fw\":\"%s\"}",
+                     TEST_DEVICE_NAME, read_battery_percent(), TEST_FW_VERSION);
+            rsp.attr_value.len = strlen(device_info);
+            memcpy(rsp.attr_value.value, device_info, rsp.attr_value.len);
+        }
         esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
                                     ESP_GATT_OK, &rsp);
         break;
@@ -409,6 +434,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         if (!param->write.is_prep){
             ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, value len %d, value :", param->write.len);
             ESP_LOG_BUFFER_HEX(GATTS_TAG, param->write.value, param->write.len);
+            if (param->write.handle == control_char_handle) {
+                char command[128];
+                int copy_len = param->write.len < (sizeof(command) - 1) ? param->write.len : (sizeof(command) - 1);
+                memcpy(command, param->write.value, copy_len);
+                command[copy_len] = 0;
+                ESP_LOGI(GATTS_TAG, "Control command: %s", command);
+            }
         }
         example_write_event_env(gatts_if, &a_prepare_write_env, param);
         break;
@@ -426,15 +458,10 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     case ESP_GATTS_CREATE_EVT:
         ESP_LOGI(GATTS_TAG, "CREATE_SERVICE_EVT, status %d,  service_handle %d", param->create.status, param->create.service_handle);
         gl_profile_tab[PROFILE_A_APP_ID].service_handle = param->create.service_handle;
-        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.len = ESP_UUID_LEN_16;
-        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_TEST_A;
 
         esp_ble_gatts_start_service(gl_profile_tab[PROFILE_A_APP_ID].service_handle);
-        a_property = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
-        esp_err_t add_char_ret = esp_ble_gatts_add_char(gl_profile_tab[PROFILE_A_APP_ID].service_handle, &gl_profile_tab[PROFILE_A_APP_ID].char_uuid,
-                                                        ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-                                                        a_property,
-                                                        &gatts_demo_char1_val, NULL);
+        a_property = ESP_GATT_CHAR_PROP_BIT_NOTIFY;
+        esp_err_t add_char_ret = add_profile_char(GATTS_GPS_CHAR_UUID, a_property, ESP_GATT_PERM_READ);
         if (add_char_ret){
             ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
         }
@@ -447,26 +474,49 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 
         ESP_LOGI(GATTS_TAG, "ADD_CHAR_EVT, status %d,  attr_handle %d, service_handle %d",
                 param->add_char.status, param->add_char.attr_handle, param->add_char.service_handle);
-        gl_profile_tab[PROFILE_A_APP_ID].char_handle = param->add_char.attr_handle;
-        gl_profile_tab[PROFILE_A_APP_ID].descr_uuid.len = ESP_UUID_LEN_16;
-        gl_profile_tab[PROFILE_A_APP_ID].descr_uuid.uuid.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
+        if (adding_char_uuid == GATTS_GPS_CHAR_UUID) {
+            gps_char_handle = param->add_char.attr_handle;
+            gl_profile_tab[PROFILE_A_APP_ID].char_handle = param->add_char.attr_handle;
+        } else if (adding_char_uuid == GATTS_CONTROL_CHAR_UUID) {
+            control_char_handle = param->add_char.attr_handle;
+        } else if (adding_char_uuid == GATTS_DEVICE_INFO_CHAR_UUID) {
+            device_info_char_handle = param->add_char.attr_handle;
+        }
         esp_err_t get_attr_ret = esp_ble_gatts_get_attr_value(param->add_char.attr_handle,  &length, &prf_char);
         if (get_attr_ret == ESP_FAIL){
             ESP_LOGE(GATTS_TAG, "ILLEGAL HANDLE");
         }
 
-        ESP_LOGI(GATTS_TAG, "the value of characteristic is %x", prf_char[0]);
-        esp_err_t add_descr_ret = esp_ble_gatts_add_char_descr(gl_profile_tab[PROFILE_A_APP_ID].service_handle, &gl_profile_tab[PROFILE_A_APP_ID].descr_uuid,
-                                                                ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE, NULL, NULL);
-        if (add_descr_ret){
-            ESP_LOGE(GATTS_TAG, "add char descr failed, error code =%x", add_descr_ret);
+        if (prf_char) {
+            ESP_LOGI(GATTS_TAG, "the value of characteristic is %x", prf_char[0]);
+        }
+        if (adding_char_uuid == GATTS_GPS_CHAR_UUID) {
+            gl_profile_tab[PROFILE_A_APP_ID].descr_uuid.len = ESP_UUID_LEN_16;
+            gl_profile_tab[PROFILE_A_APP_ID].descr_uuid.uuid.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
+            esp_err_t add_descr_ret = esp_ble_gatts_add_char_descr(gl_profile_tab[PROFILE_A_APP_ID].service_handle, &gl_profile_tab[PROFILE_A_APP_ID].descr_uuid,
+                                                                    ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE, NULL, NULL);
+            if (add_descr_ret){
+                ESP_LOGE(GATTS_TAG, "add char descr failed, error code =%x", add_descr_ret);
+            }
+        } else if (adding_char_uuid == GATTS_CONTROL_CHAR_UUID) {
+            esp_err_t add_info_ret = add_profile_char(GATTS_DEVICE_INFO_CHAR_UUID, ESP_GATT_CHAR_PROP_BIT_READ, ESP_GATT_PERM_READ);
+            if (add_info_ret){
+                ESP_LOGE(GATTS_TAG, "add device info char failed, error code =%x", add_info_ret);
+            }
         }
         break;
     }
     case ESP_GATTS_ADD_CHAR_DESCR_EVT:
+        gps_descr_handle = param->add_char_descr.attr_handle;
         gl_profile_tab[PROFILE_A_APP_ID].descr_handle = param->add_char_descr.attr_handle;
         ESP_LOGI(GATTS_TAG, "ADD_DESCR_EVT, status %d, attr_handle %d, service_handle %d",
                  param->add_char_descr.status, param->add_char_descr.attr_handle, param->add_char_descr.service_handle);
+        {
+            esp_err_t add_control_ret = add_profile_char(GATTS_CONTROL_CHAR_UUID, ESP_GATT_CHAR_PROP_BIT_WRITE, ESP_GATT_PERM_WRITE);
+            if (add_control_ret){
+                ESP_LOGE(GATTS_TAG, "add control char failed, error code =%x", add_control_ret);
+            }
+        }
         break;
     case ESP_GATTS_DELETE_EVT:
         break;
@@ -554,6 +604,7 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
+    gl_profile_tab[PROFILE_A_APP_ID].conn_id = 0xffff;
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
